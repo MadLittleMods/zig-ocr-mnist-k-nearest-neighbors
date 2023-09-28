@@ -1,5 +1,4 @@
 const std = @import("std");
-const BigEndianStructDeserializer = @import("big_endian_struct_deserializer.zig").BigEndianStructDeserializer;
 
 const TRAIN_DATA_FILE_PATH = "data/train-images-idx3-ubyte";
 const TRAIN_LABELS_FILE_PATH = "data/train-labels-idx1-ubyte";
@@ -24,18 +23,12 @@ const MnistImageFileHeader = extern struct {
 pub fn main() !void {
     const file = try std.fs.cwd().openFile(TRAIN_DATA_FILE_PATH, .{});
     defer file.close();
+    //try file.seekTo(0);
 
-    var buffer: [@sizeOf(MnistImageFileHeader)]u8 = undefined;
-    try file.seekTo(0);
-    const number_bytes_read = try file.read(&buffer);
-    if (number_bytes_read != @sizeOf(MnistImageFileHeader)) {
-        std.log.warn("Expected to read {} bytes, but got {}\n", .{ @sizeOf(MnistImageFileHeader), number_bytes_read });
-        return error.NotEnoughBytesInFile;
-    }
+    var buffered_reader = std.io.bufferedReader(file.reader());
+    var file_reader = buffered_reader.reader();
 
-    var bigEndianStructDeserializer = BigEndianStructDeserializer.init(&buffer);
-    const header = try bigEndianStructDeserializer.read(MnistImageFileHeader);
-
+    const header = try file_reader.readStructBig(MnistImageFileHeader);
     std.log.debug("header {}", .{header});
 
     try std.testing.expectEqual(header.magic_number, 2051);
