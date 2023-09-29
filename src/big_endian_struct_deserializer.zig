@@ -7,7 +7,7 @@ pub fn BigEndianStructDeserializer(comptime ReaderType: type) type {
 
         // We use our own `readStruct(...)` function instead of `self.reader.readStruct(...)`
         // because the standard library uses a byte swap function that does not work on arrays.
-        fn readStruct(self: *@This(), comptime T: type) !T {
+        fn readStruct(self: *const @This(), comptime T: type) !T {
             const fields = std.meta.fields(T);
 
             var item: T = undefined;
@@ -18,7 +18,7 @@ pub fn BigEndianStructDeserializer(comptime ReaderType: type) type {
             return item;
         }
 
-        pub fn read(self: *@This(), comptime T: type) !T {
+        pub fn read(self: *const @This(), comptime T: type) !T {
             return switch (@typeInfo(T)) {
                 .Int => try self.reader.readIntBig(T),
                 .Float => try self.reader.readVarInt(T, .Big, @sizeOf(T)),
