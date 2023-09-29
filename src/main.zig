@@ -19,8 +19,12 @@ const MnistImageFileHeader = extern struct {
     // }
 };
 
+const RawImageData = [28 * 28]u8;
+
 const Image = extern struct {
-    pixels: [28 * 28]u8,
+    width: u8 = 28,
+    height: u8 = 28,
+    pixels: RawImageData,
 };
 
 fn decorateStringWithAnsiColor(input_string: []const u8, hex_color: u24, allocator: std.mem.Allocator) ![]const u8 {
@@ -38,6 +42,27 @@ fn decorateStringWithAnsiColor(input_string: []const u8, hex_color: u24, allocat
         },
     );
     return string;
+}
+
+fn printImage(image: Image, allocator: std.mem.Allocator) !void {
+    for (0..(image.height - 1)) |row_index| {
+        const row_start_index = row_index * image.width;
+        for (0..(image.width - 1)) |column_index| {
+            const index = row_start_index + column_index;
+            const pixel_value = image.pixels[index];
+            const colored_pixel_string = try decorateStringWithAnsiColor(
+                "x",
+                // Create a white color with the pixel value as the brightness
+                (@as(u24, pixel_value) << 16) | (@as(u24, pixel_value) << 8) | (@as(u24, pixel_value) << 0),
+                allocator,
+            );
+            defer allocator.free(colored_pixel_string);
+            std.debug.print("{s}", .{
+                colored_pixel_string,
+            });
+        }
+        std.debug.print("\n", .{});
+    }
 }
 
 pub fn main() !void {
@@ -67,25 +92,17 @@ pub fn main() !void {
 
     // Make sure we don't try to allocate more images than there are in the file
     std.debug.assert(header.number_of_images >= NUMBER_OF_IMAGES_TO_TRAIN_ON);
-    const image_array = try allocator.alloc(Image, NUMBER_OF_IMAGES_TO_TRAIN_ON);
-    defer allocator.free(image_array);
+    const image_data_array = try allocator.alloc(RawImageData, NUMBER_OF_IMAGES_TO_TRAIN_ON);
+    defer allocator.free(image_data_array);
 
     var deserializer = bigEndianStructDeserializer(file_reader);
 
     for (0..(NUMBER_OF_IMAGES_TO_TRAIN_ON - 1)) |image_index| {
-        const image = try deserializer.read(Image);
-        image_array[image_index] = image;
+        const image = try deserializer.read(RawImageData);
+        image_data_array[image_index] = image;
     }
 
-    const colored_asdf = try decorateStringWithAnsiColor("asdf", 0xFF0000, allocator);
-    defer allocator.free(colored_asdf);
-    std.log.debug("asdf {s}", .{
-        colored_asdf,
-    });
-
-    for (0..(header.number_of_rows - 1)) |image_index| {
-        const start_index = image_index * header.number_of_columns;
-        const end_index = start_index + header.number_of_columns;
-        std.log.debug("{any}", .{image_array[0].pixels[start_index..end_index]});
-    }
+    try printImage(Image{
+        .pixels = image_data_array[0],
+    }, allocator);
 }
