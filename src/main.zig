@@ -51,7 +51,7 @@ fn printImage(image: Image, allocator: std.mem.Allocator) !void {
             const index = row_start_index + column_index;
             const pixel_value = image.pixels[index];
             const colored_pixel_string = try decorateStringWithAnsiColor(
-                "x",
+                "\u{2588}\u{2588}",
                 // Create a white color with the pixel value as the brightness
                 (@as(u24, pixel_value) << 16) | (@as(u24, pixel_value) << 8) | (@as(u24, pixel_value) << 0),
                 allocator,
