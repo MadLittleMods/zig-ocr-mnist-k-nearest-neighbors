@@ -6,7 +6,8 @@ const TRAIN_LABELS_FILE_PATH = "data/train-labels-idx1-ubyte";
 const TEST_DATA_FILE_PATH = "data/t10k-images-idx3-ubyte";
 const TEST_LABELS_FILE_PATH = "data/t10k-labels-idx1-ubyte";
 
-const NUMBER_OF_IMAGES_TO_TRAIN_ON = 10000;
+const NUMBER_OF_IMAGES_TO_TRAIN_ON = 30000;
+const NUMBER_OF_IMAGES_TO_TEST_ON = 10000;
 
 const MnistLabelFileHeader = extern struct {
     magic_number: u32,
@@ -53,17 +54,17 @@ fn decorateStringWithAnsiColor(input_string: []const u8, hex_color: u24, allocat
 
 fn printImage(image: Image, allocator: std.mem.Allocator) !void {
     std.debug.print("┌", .{});
-    for (0..(image.width - 1)) |column_index| {
+    for (0..image.width) |column_index| {
         _ = column_index;
         std.debug.print("──", .{});
     }
     std.debug.print("┐\n", .{});
 
-    for (0..(image.height - 1)) |row_index| {
+    for (0..image.height) |row_index| {
         std.debug.print("│", .{});
 
         const row_start_index = row_index * image.width;
-        for (0..(image.width - 1)) |column_index| {
+        for (0..image.width) |column_index| {
             const index = row_start_index + column_index;
             const pixel_value = image.pixels[index];
             const colored_pixel_string = try decorateStringWithAnsiColor(
@@ -81,7 +82,7 @@ fn printImage(image: Image, allocator: std.mem.Allocator) !void {
     }
 
     std.debug.print("└", .{});
-    for (0..(image.width - 1)) |column_index| {
+    for (0..image.width) |column_index| {
         _ = column_index;
         std.debug.print("──", .{});
     }
@@ -120,11 +121,17 @@ fn readMnistFile(
     const header = try file_reader.readStructBig(HeaderType);
 
     // Make sure we don't try to allocate more images than there are in the file
-    std.debug.assert(@field(header, numberOfItemsFieldName) >= number_of_items_to_read);
+    if (number_of_items_to_read > @field(header, numberOfItemsFieldName)) {
+        std.log.err("Trying to read more items than there are in the file {} > {}", .{
+            number_of_items_to_read,
+            @field(header, numberOfItemsFieldName),
+        });
+        return error.UnableToReadMoreItemsThanInFile;
+    }
 
     const image_data_array = try allocator.alloc(ItemType, number_of_items_to_read);
     const deserializer = bigEndianStructDeserializer(file_reader);
-    for (0..(number_of_items_to_read - 1)) |image_index| {
+    for (0..number_of_items_to_read) |image_index| {
         const image = try deserializer.read(ItemType);
         image_data_array[image_index] = image;
     }
@@ -199,7 +206,10 @@ const PredictionResult = struct {
     },
 };
 
-// (knn)
+// (knn). Just straight up compares all of the pixels in each of the training images to
+// the sample to see which one is the closest. The K number of closest images are
+// grouped together and the most frequent label in the group is chosen as the
+// prediction.
 fn kNearestNeighbors(
     training_images: []const RawImageData,
     training_labels: []const LabelType,
@@ -249,6 +259,9 @@ pub const PredictiveModel = struct {
     training_images: []const RawImageData = undefined,
     training_labels: []const LabelType = undefined,
 
+    // Since we're just using K nearest neighbors (KNN), there's no upfront training we
+    // can do. We just need to store the training data so we can use it to compare
+    // against a test image when we later try to make a prediction.
     pub fn train(
         self: *@This(),
         training_images: []const RawImageData,
@@ -283,6 +296,7 @@ pub fn main() !void {
         }
     }
 
+    // Read in the MNIST training labels
     const training_labels_data = try readMnistFile(
         MnistLabelFileHeader,
         u8,
@@ -296,6 +310,7 @@ pub fn main() !void {
     try std.testing.expectEqual(training_labels_data.header.magic_number, 2049);
     try std.testing.expectEqual(training_labels_data.header.number_of_labels, 60000);
 
+    // Read in the MNIST training images
     const training_images_data = try readMnistFile(
         MnistImageFileHeader,
         RawImageData,
@@ -311,12 +326,13 @@ pub fn main() !void {
     try std.testing.expectEqual(training_images_data.header.number_of_rows, 28);
     try std.testing.expectEqual(training_images_data.header.number_of_columns, 28);
 
+    // Read in the MNIST testing labels
     const testing_labels_data = try readMnistFile(
         MnistLabelFileHeader,
         u8,
         TEST_LABELS_FILE_PATH,
         "number_of_labels",
-        NUMBER_OF_IMAGES_TO_TRAIN_ON,
+        NUMBER_OF_IMAGES_TO_TEST_ON,
         allocator,
     );
     defer allocator.free(testing_labels_data.items);
@@ -324,12 +340,13 @@ pub fn main() !void {
     try std.testing.expectEqual(testing_labels_data.header.magic_number, 2049);
     try std.testing.expectEqual(testing_labels_data.header.number_of_labels, 10000);
 
+    // Read in the MNIST testing images
     const testing_images_data = try readMnistFile(
         MnistImageFileHeader,
         RawImageData,
         TEST_DATA_FILE_PATH,
         "number_of_images",
-        NUMBER_OF_IMAGES_TO_TRAIN_ON,
+        NUMBER_OF_IMAGES_TO_TEST_ON,
         allocator,
     );
     defer allocator.free(testing_images_data.items);
@@ -339,7 +356,9 @@ pub fn main() !void {
     try std.testing.expectEqual(testing_images_data.header.number_of_rows, 28);
     try std.testing.expectEqual(testing_images_data.header.number_of_columns, 28);
 
+    // Setup our model
     var predictive_model = PredictiveModel{};
+    // Since we're just using KNN, this is basically just a no-op (see docstring)
     try predictive_model.train(training_images_data.items, training_labels_data.items);
 
     // {
@@ -357,6 +376,7 @@ pub fn main() !void {
     //     try printLabeledImage(labeled_image_under_test, allocator);
     // }
 
+    var incorrect_prediction_count: u32 = 0;
     for (testing_images_data.items, testing_labels_data.items, 0..) |test_image, test_label, test_image_index| {
         const labeled_image_under_test = LabeledImage{
             .label = test_label,
@@ -365,11 +385,20 @@ pub fn main() !void {
             },
         };
 
+        if (test_image_index % 100 == 0) {
+            std.log.debug("Progress: working on test image {d}", .{test_image_index});
+        }
+
         const prediction_result = try predictive_model.predict(labeled_image_under_test.image.pixels, allocator);
 
         if (prediction_result.prediction != labeled_image_under_test.label) {
-            std.log.debug("{d}: prediction {}", .{ test_image_index, prediction_result.prediction });
+            incorrect_prediction_count += 1;
+            std.log.debug("Test image {d}: incorrect prediction {}", .{ test_image_index, prediction_result.prediction });
             try printLabeledImage(labeled_image_under_test, allocator);
         }
     }
+
+    std.log.debug("incorrect_prediction_count {d}", .{incorrect_prediction_count});
+    const inaccuracy: f32 = @as(f32, @floatFromInt(incorrect_prediction_count)) / @as(f32, @floatFromInt(testing_images_data.items.len));
+    std.log.debug("accuracy {d}", .{1 - inaccuracy});
 }
