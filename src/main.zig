@@ -136,21 +136,21 @@ pub fn main() !void {
     try predictive_model.train(training_images_data.items, training_labels_data.items);
 
     // For debugging: look at a single image and its nearest neighbors
-    {
-        const index_under_test: u32 = 0;
-        const labeled_image_under_test = mnist_data_utils.LabeledImage{
-            .label = testing_labels_data.items[index_under_test],
-            .image = mnist_data_utils.Image{
-                .pixels = testing_images_data.items[index_under_test],
-            },
-        };
+    // {
+    //     const index_under_test: u32 = 0;
+    //     const labeled_image_under_test = mnist_data_utils.LabeledImage{
+    //         .label = testing_labels_data.items[index_under_test],
+    //         .image = mnist_data_utils.Image{
+    //             .pixels = testing_images_data.items[index_under_test],
+    //         },
+    //     };
 
-        const prediction_result = try predictive_model.predict(labeled_image_under_test.image.pixels, allocator);
-        defer allocator.free(prediction_result.debug.neighbors);
-        std.log.debug("prediction {}", .{prediction_result.prediction});
-        std.log.debug("nearest neighbors {any}", .{prediction_result.debug.neighbors});
-        try print_utils.printLabeledImage(labeled_image_under_test, allocator);
-    }
+    //     const prediction_result = try predictive_model.predict(labeled_image_under_test.image.pixels, allocator);
+    //     defer allocator.free(prediction_result.debug.neighbors);
+    //     std.log.debug("prediction {}", .{prediction_result.prediction});
+    //     std.log.debug("nearest neighbors {any}", .{prediction_result.debug.neighbors});
+    //     try print_utils.printLabeledImage(labeled_image_under_test, allocator);
+    // }
 
     // Go through all the test images and see how many we get right
     var incorrect_prediction_count: u32 = 0;
