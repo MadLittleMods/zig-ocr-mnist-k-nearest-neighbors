@@ -30,6 +30,7 @@ fn decorateStringWithAnsiColor(
             },
         );
     }
+    defer allocator.free(foreground_color_code_string);
 
     var background_color_code_string: []const u8 = "";
     if (optional_background_hex_color) |background_hex_color| {
@@ -52,6 +53,7 @@ fn decorateStringWithAnsiColor(
             },
         );
     }
+    defer allocator.free(background_color_code_string);
 
     var possible_combinator_string: []const u8 = "";
     if (optional_foreground_hex_color != null and optional_background_hex_color != null) {
@@ -80,8 +82,13 @@ pub const TerminalPrintingCharacter = struct {
     opacity_compensation_factor: f32,
 };
 
-// In order to facilitate better copy/pasting from the terminal into some plain-text
-// document like a README, vary the characters so they look different from each other.
+// Given a pixel value from 0 to 255, return a unicode block character that represents
+// that pixel value (from nothing, to light shade, to medium shade, to dark shade, to
+// full block).
+//
+// We use this in order to facilitate better copy/pasting from the terminal into a
+// plain-text document like a README, vary the characters so they look different from
+// each other.
 //
 // See https://en.wikipedia.org/wiki/Block_Elements
 fn getCharacterForPixelValue(pixel_value: u8) TerminalPrintingCharacter {
@@ -144,11 +151,15 @@ pub fn printImage(image: mnist_data_utils.Image, allocator: std.mem.Allocator) !
             const pixel_character = getCharacterForPixelValue(pixel_value);
             const pixel_string = try std.fmt.allocPrint(
                 allocator,
+                // We use the same character twice to make it look more square (still
+                // not perfect though)
                 "{0s}{0s}",
                 .{pixel_character.character},
             );
             defer allocator.free(pixel_string);
 
+            // Adjust the pixel value to compensate for the opacity of the block
+            // character that we're using to represent it.
             const display_pixel_value: u8 = @intFromFloat(
                 @as(f32, @floatFromInt(pixel_value)) * pixel_character.opacity_compensation_factor,
             );

@@ -16,7 +16,8 @@ Just getting my feet wet in OCR.
 ## Setup
 
 Download and extract the MNIST dataset from http://yann.lecun.com/exdb/mnist/ to a
-directory called `data/` in the root of this project.
+directory called `data/` in the root of this project. Here is a copy-paste command
+you can run:
 
 ```sh
 # Make a data/ directory

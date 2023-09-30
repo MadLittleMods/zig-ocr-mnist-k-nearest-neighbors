@@ -1,8 +1,8 @@
 const std = @import("std");
 const mnist_data_utils = @import("mnist_data_utils.zig");
 
-// Function to calculate Euclidean distance between all the pixels in an image
-fn distance_between_images(training_image: mnist_data_utils.RawImageData, test_image: mnist_data_utils.RawImageData) u64 {
+/// Calculate Euclidean distance between all the pixels in an image
+fn distanceBetweenImages(training_image: mnist_data_utils.RawImageData, test_image: mnist_data_utils.RawImageData) u64 {
     var sum: u64 = 0;
     for (training_image, test_image) |training_pixel, test_image_pixel| {
         sum += @as(u64, @intCast(
@@ -17,11 +17,13 @@ const LabeledDistance = struct {
     label: mnist_data_utils.LabelType,
     distance: u64,
 
+    /// Sort by label ascending (for use with `std.mem.sort(...)`)
     fn sort_label_ascending(context: void, lhs: @This(), rhs: @This()) bool {
         _ = context;
         return lhs.label < rhs.label;
     }
 
+    /// Sort by distance ascending (for use with `std.mem.sort(...)`)
     fn sort_distance_ascending(context: void, lhs: @This(), rhs: @This()) bool {
         _ = context;
         return lhs.distance < rhs.distance;
@@ -86,7 +88,7 @@ pub fn kNearestNeighbors(
 
     // Compare our test image against all of the training images to see which ones are the closest
     for (training_images, training_labels, 0..) |training_image, training_label, training_index| {
-        const training_distance = distance_between_images(training_image, test_image);
+        const training_distance = distanceBetweenImages(training_image, test_image);
 
         labeled_distances[training_index] = LabeledDistance{
             .label = training_label,
