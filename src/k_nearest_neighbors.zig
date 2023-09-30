@@ -28,8 +28,10 @@ const LabeledDistance = struct {
     }
 };
 
+// Based on https://stackoverflow.com/a/8545681/796832
 fn getMostFrequentLabel(labeled_distances: []LabeledDistance) mnist_data_utils.LabelType {
-    // First sort by the label so we can just use a single loop to find the most frequent label
+    // First sort by the label so we can just use a single loop to find the most frequent label.
+    // This will get the list in order like 1, 1, 1, 2, 2, 3, 3, 3, 3, 3.
     std.mem.sort(
         LabeledDistance,
         labeled_distances,
@@ -82,6 +84,7 @@ pub fn kNearestNeighbors(
     const labeled_distances = try allocator.alloc(LabeledDistance, training_images.len);
     defer allocator.free(labeled_distances);
 
+    // Compare our test image against all of the training images to see which ones are the closest
     for (training_images, training_labels, 0..) |training_image, training_label, training_index| {
         const training_distance = distance_between_images(training_image, test_image);
 
@@ -100,7 +103,14 @@ pub fn kNearestNeighbors(
     );
 
     // Find the k nearest neighbors
-    const k_nearest_labeled_distances = labeled_distances[0..k];
+    const k_nearest_labeled_distances = try allocator.alloc(LabeledDistance, k);
+    // We make a copy instead of just slicing because we return it from the function
+    // and we don't want to return stack memory that will be freed after the function returns.
+    std.mem.copy(
+        LabeledDistance,
+        k_nearest_labeled_distances,
+        labeled_distances[0..k],
+    );
     // std.log.debug("k_nearest_labeled_distances {any}", .{k_nearest_labeled_distances});
 
     // Get the most frequent label from the nearest neighbors
@@ -110,8 +120,6 @@ pub fn kNearestNeighbors(
     return .{
         .prediction = most_frequent_label,
         .debug = .{
-            // TODO: Accessing this will give a segmentation fault because `labeled_distances` is freed
-            // after this function returns. Need to figure out how to make this work.
             .neighbors = k_nearest_labeled_distances,
         },
     };

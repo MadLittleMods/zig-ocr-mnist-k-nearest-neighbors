@@ -7,8 +7,12 @@ const TRAIN_LABELS_FILE_PATH = "data/train-labels-idx1-ubyte";
 const TEST_DATA_FILE_PATH = "data/t10k-images-idx3-ubyte";
 const TEST_LABELS_FILE_PATH = "data/t10k-labels-idx1-ubyte";
 
-const NUMBER_OF_IMAGES_TO_TRAIN_ON = 30000;
-const NUMBER_OF_IMAGES_TO_TEST_ON = 10000;
+// Adjust as necessary. To make the program run faster, you can reduce the number of
+// images to train on and test on. To make the program more accurate, you can increase
+// the number of images to train on (also try playing with the value of `k` in the model
+// which influences K-nearest neighbor algorithm).
+const NUMBER_OF_IMAGES_TO_TRAIN_ON = 10000; // (max 60k)
+const NUMBER_OF_IMAGES_TO_TEST_ON = 100; // (max 10k)
 
 /// Add ANSI escape codes to around a given string to make it a certain RGB color in the terminal
 fn decorateStringWithAnsiColor(
@@ -94,8 +98,9 @@ pub const PredictiveModel = struct {
     // can do. We just need to store the training data so we can use it to compare
     // against a test image when we later try to make a prediction.
     //
-    // We could do some preprocessing here (called feature selection), like removing all
-    // the pixels that don't contribute to giving us accurate results. See
+    // We could do some preprocessing here (called feature selection), like removing
+    // pixels that don't contribute to giving us accurate results (less data would also
+    // be faster to iterate over). See
     // https://towardsdatascience.com/feature-selection-how-to-throw-away-95-of-your-data-and-get-95-accuracy-ad41ca016877
     // for ideas.
     pub fn train(
@@ -204,14 +209,15 @@ pub fn main() !void {
     // For debugging: look at a single image and its nearest neighbors
     // {
     //     const index_under_test: u32 = 5;
-    //     const labeled_image_under_test = LabeledImage{
+    //     const labeled_image_under_test = mnist_data_utils.LabeledImage{
     //         .label = testing_labels_data.items[index_under_test],
-    //         .image = Image{
+    //         .image = mnist_data_utils.Image{
     //             .pixels = testing_images_data.items[index_under_test],
     //         },
     //     };
 
     //     const prediction_result = try predictive_model.predict(labeled_image_under_test.image.pixels, allocator);
+    //     defer allocator.free(prediction_result.debug.neighbors);
     //     std.log.debug("prediction {}", .{prediction_result.prediction});
     //     std.log.debug("nearest neighbors {any}", .{prediction_result.debug.neighbors});
     //     try printLabeledImage(labeled_image_under_test, allocator);
@@ -234,6 +240,7 @@ pub fn main() !void {
         }
 
         const prediction_result = try predictive_model.predict(labeled_image_under_test.image.pixels, allocator);
+        defer allocator.free(prediction_result.debug.neighbors);
         // Only print when we get something wrong
         if (prediction_result.prediction != labeled_image_under_test.label) {
             incorrect_prediction_count += 1;

@@ -41,8 +41,14 @@ zig build run
 ```
 
 
+## Results/Accuracy
 
-### Dev notes
+With `k=5`, running with all 60k training images against the 10k test images, we get
+an accuracy of XXX% (XXX/10000).
+
+
+
+## Dev notes
 
 See the [*developer notes*](./dev-notes.md) for more information.
 

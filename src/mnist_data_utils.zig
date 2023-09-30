@@ -2,11 +2,13 @@ const std = @import("std");
 const bigEndianStructDeserializer = @import("big_endian_struct_deserializer.zig").bigEndianStructDeserializer;
 
 pub const MnistLabelFileHeader = extern struct {
+    /// The magic number is used to identify the file type (doesn't really matter to us)
     magic_number: u32,
     number_of_labels: u32,
 };
 
 pub const MnistImageFileHeader = extern struct {
+    /// The magic number is used to identify the file type (doesn't really matter to us).
     magic_number: u32,
     number_of_images: u32,
     number_of_rows: u32,
