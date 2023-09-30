@@ -10,16 +10,28 @@ const TEST_LABELS_FILE_PATH = "data/t10k-labels-idx1-ubyte";
 const NUMBER_OF_IMAGES_TO_TRAIN_ON = 30000;
 const NUMBER_OF_IMAGES_TO_TEST_ON = 10000;
 
-fn decorateStringWithAnsiColor(input_string: []const u8, hex_color: u24, allocator: std.mem.Allocator) ![]const u8 {
+/// Add ANSI escape codes to around a given string to make it a certain RGB color in the terminal
+fn decorateStringWithAnsiColor(
+    input_string: []const u8,
+    /// Example: `0xFFFFFF`
+    hex_color: u24,
+    allocator: std.mem.Allocator,
+) ![]const u8 {
     const string = try std.fmt.allocPrint(
         allocator,
         "\u{001b}[38;2;{d};{d};{d}m{s}\u{001b}[0m",
         .{
-            // red
-            hex_color >> 16,
-            // green
+            // Red channel:
+            // Shift the hex color right 16 bits to get the red component all the way down,
+            // then make sure we only select the lowest 8 bits by using `& 0xFF`
+            (hex_color >> 16) & 0xFF,
+            // Greeen channel:
+            // Shift the hex color right 8 bits to get the green component all the way down,
+            // then make sure we only select the lowest 8 bits by using `& 0xFF`
             (hex_color >> 8) & 0xFF,
-            // blue
+            // Blue channel:
+            // No need to shift the hex color to get the blue component all the way down,
+            // but we still need to make sure we only select the lowest 8 bits by using `& 0xFF`
             hex_color & 0xFF,
             input_string,
         },
@@ -71,12 +83,21 @@ fn printLabeledImage(labeled_image: mnist_data_utils.LabeledImage, allocator: st
 }
 
 pub const PredictiveModel = struct {
+    // XXX: Make sure to tune this value to fit the data better (play with the number
+    // and see how it affects accuracy)
+    k: u8 = 5,
+
     training_images: []const mnist_data_utils.RawImageData = undefined,
     training_labels: []const mnist_data_utils.LabelType = undefined,
 
     // Since we're just using K nearest neighbors (KNN), there's no upfront training we
     // can do. We just need to store the training data so we can use it to compare
     // against a test image when we later try to make a prediction.
+    //
+    // We could do some preprocessing here (called feature selection), like removing all
+    // the pixels that don't contribute to giving us accurate results. See
+    // https://towardsdatascience.com/feature-selection-how-to-throw-away-95-of-your-data-and-get-95-accuracy-ad41ca016877
+    // for ideas.
     pub fn train(
         self: *@This(),
         training_images: []const mnist_data_utils.RawImageData,
@@ -95,7 +116,7 @@ pub const PredictiveModel = struct {
             self.training_images,
             self.training_labels,
             test_image,
-            5,
+            self.k,
             allocator,
         );
     }
@@ -172,7 +193,11 @@ pub fn main() !void {
     try std.testing.expectEqual(testing_images_data.header.number_of_columns, 28);
 
     // Setup our model
-    var predictive_model = PredictiveModel{};
+    var predictive_model = PredictiveModel{
+        // XXX: We can tune this value to fit the data better (play with the number
+        // and see how it affects accuracy)
+        .k = 5,
+    };
     // Since we're just using KNN, this is basically just a no-op (see docstring)
     try predictive_model.train(training_images_data.items, training_labels_data.items);
 
@@ -202,12 +227,14 @@ pub fn main() !void {
             },
         };
 
+        // Since this whole process can take a while to run, give some indication of
+        // progress while it runs.
         if (test_image_index % 100 == 0) {
             std.log.debug("Progress: working on test image {d}", .{test_image_index});
         }
 
         const prediction_result = try predictive_model.predict(labeled_image_under_test.image.pixels, allocator);
-
+        // Only print when we get something wrong
         if (prediction_result.prediction != labeled_image_under_test.label) {
             incorrect_prediction_count += 1;
             std.log.debug("Test image {d}: incorrect prediction {}", .{ test_image_index, prediction_result.prediction });

@@ -69,6 +69,9 @@ pub const PredictionResult = struct {
 // the sample to see which one is the closest. The K number of closest images are
 // grouped together and the most frequent label in the group is chosen as the
 // prediction.
+//
+// With many training images, this is very slow. For example, if there are 60k training
+// images, we compare every pixel of those 60k images to the test sample image.
 pub fn kNearestNeighbors(
     training_images: []const mnist_data_utils.RawImageData,
     training_labels: []const mnist_data_utils.LabelType,

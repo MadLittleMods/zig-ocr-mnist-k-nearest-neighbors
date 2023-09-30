@@ -34,6 +34,8 @@ pub fn MnistData(comptime HeaderType: type, comptime ItemType: type) type {
     };
 }
 
+// This method works against the standard MNIST dataset files, which can be downloaded from:
+// http://yann.lecun.com/exdb/mnist/
 pub fn readMnistFile(
     comptime HeaderType: type,
     comptime ItemType: type,
