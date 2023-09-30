@@ -1,6 +1,7 @@
 const std = @import("std");
 const mnist_data_utils = @import("mnist_data_utils.zig");
 const k_nearest_neighbors = @import("k_nearest_neighbors.zig");
+const print_utils = @import("print_utils.zig");
 
 const TRAIN_DATA_FILE_PATH = "data/train-images-idx3-ubyte";
 const TRAIN_LABELS_FILE_PATH = "data/train-labels-idx1-ubyte";
@@ -13,78 +14,6 @@ const TEST_LABELS_FILE_PATH = "data/t10k-labels-idx1-ubyte";
 // which influences K-nearest neighbor algorithm).
 const NUMBER_OF_IMAGES_TO_TRAIN_ON = 10000; // (max 60k)
 const NUMBER_OF_IMAGES_TO_TEST_ON = 100; // (max 10k)
-
-/// Add ANSI escape codes to around a given string to make it a certain RGB color in the terminal
-fn decorateStringWithAnsiColor(
-    input_string: []const u8,
-    /// Example: `0xFFFFFF`
-    hex_color: u24,
-    allocator: std.mem.Allocator,
-) ![]const u8 {
-    const string = try std.fmt.allocPrint(
-        allocator,
-        "\u{001b}[38;2;{d};{d};{d}m{s}\u{001b}[0m",
-        .{
-            // Red channel:
-            // Shift the hex color right 16 bits to get the red component all the way down,
-            // then make sure we only select the lowest 8 bits by using `& 0xFF`
-            (hex_color >> 16) & 0xFF,
-            // Greeen channel:
-            // Shift the hex color right 8 bits to get the green component all the way down,
-            // then make sure we only select the lowest 8 bits by using `& 0xFF`
-            (hex_color >> 8) & 0xFF,
-            // Blue channel:
-            // No need to shift the hex color to get the blue component all the way down,
-            // but we still need to make sure we only select the lowest 8 bits by using `& 0xFF`
-            hex_color & 0xFF,
-            input_string,
-        },
-    );
-    return string;
-}
-
-fn printImage(image: mnist_data_utils.Image, allocator: std.mem.Allocator) !void {
-    std.debug.print("┌", .{});
-    for (0..image.width) |column_index| {
-        _ = column_index;
-        std.debug.print("──", .{});
-    }
-    std.debug.print("┐\n", .{});
-
-    for (0..image.height) |row_index| {
-        std.debug.print("│", .{});
-
-        const row_start_index = row_index * image.width;
-        for (0..image.width) |column_index| {
-            const index = row_start_index + column_index;
-            const pixel_value = image.pixels[index];
-            const colored_pixel_string = try decorateStringWithAnsiColor(
-                "\u{2588}\u{2588}",
-                // Create a white color with the pixel value as the brightness
-                (@as(u24, pixel_value) << 16) | (@as(u24, pixel_value) << 8) | (@as(u24, pixel_value) << 0),
-                allocator,
-            );
-            defer allocator.free(colored_pixel_string);
-            std.debug.print("{s}", .{
-                colored_pixel_string,
-            });
-        }
-        std.debug.print("│\n", .{});
-    }
-
-    std.debug.print("└", .{});
-    for (0..image.width) |column_index| {
-        _ = column_index;
-        std.debug.print("──", .{});
-    }
-    std.debug.print("┘\n", .{});
-}
-
-fn printLabeledImage(labeled_image: mnist_data_utils.LabeledImage, allocator: std.mem.Allocator) !void {
-    std.debug.print("┌──────────┐\n", .{});
-    std.debug.print("│ Label: {d} │\n", .{labeled_image.label});
-    try printImage(labeled_image.image, allocator);
-}
 
 pub const PredictiveModel = struct {
     // XXX: Make sure to tune this value to fit the data better (play with the number
@@ -207,21 +136,21 @@ pub fn main() !void {
     try predictive_model.train(training_images_data.items, training_labels_data.items);
 
     // For debugging: look at a single image and its nearest neighbors
-    // {
-    //     const index_under_test: u32 = 5;
-    //     const labeled_image_under_test = mnist_data_utils.LabeledImage{
-    //         .label = testing_labels_data.items[index_under_test],
-    //         .image = mnist_data_utils.Image{
-    //             .pixels = testing_images_data.items[index_under_test],
-    //         },
-    //     };
+    {
+        const index_under_test: u32 = 0;
+        const labeled_image_under_test = mnist_data_utils.LabeledImage{
+            .label = testing_labels_data.items[index_under_test],
+            .image = mnist_data_utils.Image{
+                .pixels = testing_images_data.items[index_under_test],
+            },
+        };
 
-    //     const prediction_result = try predictive_model.predict(labeled_image_under_test.image.pixels, allocator);
-    //     defer allocator.free(prediction_result.debug.neighbors);
-    //     std.log.debug("prediction {}", .{prediction_result.prediction});
-    //     std.log.debug("nearest neighbors {any}", .{prediction_result.debug.neighbors});
-    //     try printLabeledImage(labeled_image_under_test, allocator);
-    // }
+        const prediction_result = try predictive_model.predict(labeled_image_under_test.image.pixels, allocator);
+        defer allocator.free(prediction_result.debug.neighbors);
+        std.log.debug("prediction {}", .{prediction_result.prediction});
+        std.log.debug("nearest neighbors {any}", .{prediction_result.debug.neighbors});
+        try print_utils.printLabeledImage(labeled_image_under_test, allocator);
+    }
 
     // Go through all the test images and see how many we get right
     var incorrect_prediction_count: u32 = 0;
@@ -245,7 +174,7 @@ pub fn main() !void {
         if (prediction_result.prediction != labeled_image_under_test.label) {
             incorrect_prediction_count += 1;
             std.log.debug("Test image {d}: incorrect prediction {}", .{ test_image_index, prediction_result.prediction });
-            try printLabeledImage(labeled_image_under_test, allocator);
+            try print_utils.printLabeledImage(labeled_image_under_test, allocator);
         }
     }
 

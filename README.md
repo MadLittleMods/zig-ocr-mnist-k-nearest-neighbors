@@ -36,17 +36,58 @@ gunzip *.gz
 
 Tested with Zig 0.11.0
 
-```
+```sh
+$ zig build run
 zig build run
+debug: training labels header mnist_data_utils.MnistLabelFileHeader{ .magic_number = 2049, .number_of_labels = 60000 }
+debug: training images header mnist_data_utils.MnistImageFileHeader{ .magic_number = 2051, .number_of_images = 60000, .number_of_rows = 28, .number_of_columns = 28 }
+debug: testing labels header mnist_data_utils.MnistLabelFileHeader{ .magic_number = 2049, .number_of_labels = 10000 }
+debug: testing images header mnist_data_utils.MnistImageFileHeader{ .magic_number = 2051, .number_of_images = 10000, .number_of_rows = 28, .number_of_columns = 28 }
+debug: prediction 7
+debug: nearest neighbors { k_nearest_neighbors.LabeledDistance{ .label = 7, .distance = 1034 }, k_nearest_neighbors.LabeledDistance{ .label = 7, .distance = 1047 }, k_nearest_neighbors.LabeledDistance{ .label = 7, .distance = 1095 }, k_nearest_neighbors.LabeledDistance{ .label = 7, .distance = 1097 }, k_nearest_neighbors.LabeledDistance{ .label = 7, .distance = 1121 } }
+┌──────────┐
+│ Label: 7 │
+┌────────────────────────────────────────────────────────┐
+│                                                        │
+│                                                        │
+│                                                        │
+│                                                        │
+│                                                        │
+│                                                        │
+│                                                        │
+│            ▒▒▓▓▓▓▓▓░░░░                                │
+│            ████████████████████████████▓▓░░            │
+│            ▒▒▒▒▒▒▒▒▓▓████████████████████▓▓            │
+│                      ░░▒▒░░▒▒▒▒▒▒░░░░████▒▒            │
+│                                    ▒▒████░░            │
+│                                  ░░████▒▒              │
+│                                  ▓▓████░░              │
+│                                ░░████░░                │
+│                                ▓▓██▓▓░░                │
+│                              ░░████░░                  │
+│                              ▒▒██▓▓                    │
+│                            ▒▒████░░                    │
+│                          ░░████▓▓                      │
+│                        ░░██████░░                      │
+│                        ░░████▒▒                        │
+│                      ░░████▒▒░░                        │
+│                      ▓▓████░░                          │
+│                    ░░██████░░                          │
+│                    ▒▒██████░░                          │
+│                    ▒▒████░░                            │
+│                                                        │
+└────────────────────────────────────────────────────────┘
+...
 ```
 
 
 ## Results/Accuracy
 
 With `k=5`, running with all 60k training images against the 10k test images, we get
-an accuracy of XXX% (XXX/10000).
+an accuracy of 96.72% (9672/10000).
 
-
+With `k=10`, running with all 60k training images against the 10k test images, we get
+an accuracy of 95.09% (9509/10000).
 
 ## Dev notes
 
