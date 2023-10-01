@@ -99,6 +99,7 @@ fn getCharacterForPixelValue(pixel_value: u8) TerminalPrintingCharacter {
         // the same width in a monospace environment.
         character = " ";
         // opacity = 0.0;
+        // No need to compensate since this character doesn't render any foreground color
         opacity_compensation_factor = 0.0;
     } else if (pixel_value < 64) {
         // Light shade character
@@ -123,6 +124,7 @@ fn getCharacterForPixelValue(pixel_value: u8) TerminalPrintingCharacter {
         character = "\u{2588}";
         // opacity = 1;
         // 1 / 1 = 1
+        // No need to compensate since anything divided by 1 is itself
         opacity_compensation_factor = 1;
     }
 
