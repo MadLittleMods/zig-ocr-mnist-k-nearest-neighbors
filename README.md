@@ -1,10 +1,10 @@
-# Basic OCR example using K-nearest neighbor against the MNIST dataset
+# Basic OCR example using K-nearest neighbors against the MNIST dataset
 
 A from scratch, simple OCR project to recognize/detect text in images from the MNIST
 dataset which is just a bunch of 28x28 images of white number digits centered on a black
 background.
 
-We're using K-nearest neighbor to classify the images which is the simplest way we can
+We're using K-nearest neighbors to classify the images which is the simplest way we can
 compare our test sample against our training samples. Basically it takes our test sample
 image and compares it to all the training samples and finds the closest match (yes, it
 is inneficient and slow with a lot of training samples).
