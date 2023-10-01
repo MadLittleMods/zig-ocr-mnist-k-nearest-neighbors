@@ -7,7 +7,7 @@ background.
 We're using K-nearest neighbors to classify the images which is the simplest way we can
 compare our test sample against our training samples. Basically it takes our test sample
 image and compares it to all the training samples and finds the closest match (yes, it
-is inneficient and slow with a lot of training samples).
+is inefficient and slow with a lot of training samples).
 
 Basically a Zig rewrite following this tutorial by Vlad Harbuz from @clumsycomputer:
 https://www.youtube.com/watch?v=vzabeKdW9tE.
